@@ -1,0 +1,7 @@
+version: "3.9"
+
+services:
+  web:
+    volumes:
+      - .:/app
+    command: docker/web/run_web_reload.sh

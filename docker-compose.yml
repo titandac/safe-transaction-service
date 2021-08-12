@@ -41,6 +41,7 @@ services:
       - "8888:8888"
     volumes:
       - nginx-shared:/nginx
+      - .:/app
     command: docker/web/run_web.sh
 
   worker: &worker
@@ -57,4 +58,3 @@ services:
   scheduler:
     <<: *worker
     command: docker/web/celery/scheduler/run.sh
-
