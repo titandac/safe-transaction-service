@@ -2,11 +2,19 @@
 
 set -euo pipefail
 
-echo "==> $(date +%H:%M:%S) ==> Migrating Django models... "
-python manage.py migrate --noinput
+echo "==> $(date +%H:%M:%S) ==> Checking migrations lock... "
+LOCK=`redis-cli -u $REDIS_URL SETNX migrations-lock 1`
 
-echo "==> $(date +%H:%M:%S) ==> Setting up service... "
-python manage.py setup_service &
+if [ $LOCK -eq 1 ]; then
+  echo "==> $(date +%H:%M:%S) ==> Got migrations lock... "
+  # Expire lock in 20 minutes
+  RESULT=`redis-cli -u $REDIS_URL EXPIRE migrations-lock 1200`
+  echo "==> $(date +%H:%M:%S) ==> Migrating Django models... "
+  python manage.py migrate --noinput
+
+  echo "==> $(date +%H:%M:%S) ==> Setting up service... "
+  python manage.py setup_service &
+fi
 
 echo "==> $(date +%H:%M:%S) ==> Collecting statics... "
 DOCKER_SHARED_DIR=/nginx
