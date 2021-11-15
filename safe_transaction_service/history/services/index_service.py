@@ -322,16 +322,21 @@ class IndexService:
                 else current_block_number
             )
             block_number = from_block_number
-            while block_number < stop_block_number:
-                elements = indexer.find_relevant_elements(
-                    addresses, block_number, block_number + block_process_limit
-                )
-                indexer.process_elements(elements)
-                block_number += block_process_limit
-                logger.info(
-                    "Current block number %d, found %d traces/events",
-                    block_number,
-                    len(elements),
-                )
+            failures = 0
+            while failures < 3 and block_number < stop_block_number:
+                try:
+                    elements = indexer.find_relevant_elements(
+                        addresses, block_number, block_number + block_process_limit
+                    )
+                    indexer.process_elements(elements)
+                    block_number += block_process_limit
+                    logger.info(
+                        "Current block number %d, found %d traces/events",
+                        block_number,
+                        len(elements),
+                    )
+                    failures = 0  # Restart failure counter
+                except ValueError:
+                    failures += 1
 
             logger.info("End reindexing addresses %s", addresses)
