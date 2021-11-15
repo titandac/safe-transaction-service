@@ -275,6 +275,7 @@ class IndexService:
         to_block_number: Optional[int] = None,
         block_process_limit: int = 1000,
         addresses: Optional[ChecksumAddress] = None,
+        allowed_failures: int = 3,
     ):
         """
         Reindexes master copies in parallel with the current running indexer, so service will have no missing txs
@@ -285,11 +286,13 @@ class IndexService:
         :param block_process_limit: Number of blocks to process each time
         :param addresses: Master Copy or Safes(for L2 event processing) addresses. If not provided,
             all master copies will be used
+        :param allowed_failures: Number of node failures to allow when reindexing before raising a `ValueError`
         """
         assert (not to_block_number) or to_block_number > from_block_number
 
         from ..indexers import (
             EthereumIndexer,
+            FindRelevantElementsException,
             InternalTxIndexerProvider,
             SafeEventsIndexerProvider,
         )
@@ -323,7 +326,7 @@ class IndexService:
             )
             block_number = from_block_number
             failures = 0
-            while failures < 3 and block_number < stop_block_number:
+            while block_number < stop_block_number:
                 try:
                     elements = indexer.find_relevant_elements(
                         addresses, block_number, block_number + block_process_limit
@@ -336,7 +339,10 @@ class IndexService:
                         len(elements),
                     )
                     failures = 0  # Restart failure counter
-                except ValueError:
-                    failures += 1
+                except FindRelevantElementsException:
+                    if failures >= allowed_failures:
+                        raise
+                    else:
+                        failures += 1
 
             logger.info("End reindexing addresses %s", addresses)
