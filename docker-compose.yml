@@ -1,4 +1,4 @@
-version: '3.5'
+version: '3.5.1-metis'
 
 volumes:
   nginx-shared:
@@ -24,7 +24,7 @@ services:
       - --appendonly no
 
   db:
-    image: postgres:13-alpine
+    image: postgres:10-alpine
     ports:
       - "5432:5432"
     environment:
